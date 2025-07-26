@@ -4,7 +4,7 @@ import keepa
 
 app = FastAPI()
 
-API_KEY = "YOUR_KEEPA_API_KEY"
+API_KEY = "9s53td5fjae0t5sr7rp5tfeq4ton69ng5eocg77e3a66t00gef3gaqdmcjsis7ec"
 
 @app.get("/")
 def root():
