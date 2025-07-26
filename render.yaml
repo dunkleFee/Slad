@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: keepa-gpt-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: KEEPA_API_KEY
+        value: bn1lpbhhp7pl1b3enmpkhbgid5ah6817tc85h6bjnf6hpagt1q27hp5ff7j6rb2k
