@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query
 import keepa
 from fastapi.responses import JSONResponse
 import os
+import time
 
 app = FastAPI()
 
@@ -12,21 +13,28 @@ def get_product_price(asin: str = Query(...)):
     try:
         api = keepa.Keepa(API_KEY)
 
-        # Форс-запрос
+        # Шаг 1: форсируем обновление
         api.query([asin], domain='US', update=True)
-        
-        import time
-        time.sleep(15)  # ждать пока Keepa обновит данные
+        time.sleep(15)
 
-        product_data = api.query([asin], domain='US')
-        product = product_data[0]
+        # Шаг 2: получаем свежие данные
+        result = api.query([asin], domain='US')
+        if not result or not isinstance(result, list) or len(result) == 0:
+            return JSONResponse(status_code=404, content={"error": "Товар не найден"})
+
+        product = result[0]
+
+        if not product:
+            return JSONResponse(status_code=404, content={"error": "Данные по ASIN отсутствуют"})
+
         title = product.get("title") or "Без названия"
-        current_price = product.get("stats", {}).get("current", [])[0]
+        price_cents = product.get("stats", {}).get("current", [])
+        price = price_cents[0] / 100 if price_cents and price_cents[0] != -1 else None
 
         return {
             "asin": asin,
             "title": title,
-            "price": round(current_price / 100, 2) if current_price != -1 else None
+            "price": price
         }
 
     except Exception as e:
