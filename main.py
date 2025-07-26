@@ -2,49 +2,43 @@ from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import keepa
-import os
 import time
 
 app = FastAPI()
 
-# 🔑 Укажи свой API-ключ как переменную окружения KEEPA_API_KEY
-API_KEY = os.environ.get("9s53td5fjae0t5sr7rp5tfeq4ton69ng5eocg77e3a66t00gef3gaqdmcjsis7ec")
+# 🔐 ВСТРОЕННЫЙ КЛЮЧ (небезопасно для публичного репозитория!)
+API_KEY = "9s53td5fjae0t5sr7rp5tfeq4ton69ng5eocg77e3a66t00gef3gaqdmcjsis7ec"
 
-# 🎯 Структура ответа
 class PriceResponse(BaseModel):
     asin: str
     title: str
     price: float | None
+
+@app.get("/")
+def root():
+    return {"message": "Keepa API работает. Используйте /price?asin=..."}
 
 @app.get("/price", response_model=PriceResponse)
 def get_product_price(asin: str = Query(..., description="ASIN товара с Amazon")):
     try:
         api = keepa.Keepa(API_KEY)
 
-        # 🔄 Форс-обновление
+        # 🔁 Обновляем товар, ждём 15 секунд
         api.query([asin], domain='US', update=True)
-        time.sleep(15)  # ожидание обновления
+        time.sleep(15)
 
-        # 🧩 Получение свежих данных
         result = api.query([asin], domain='US')
-
-        if not result or not isinstance(result, list) or len(result) == 0:
-            return JSONResponse(status_code=404, content={"error": "Товар не найден (пустой результат)"})
+        if not result or len(result) == 0 or result[0] is None:
+            raise ValueError("Товар не найден")
 
         product = result[0]
-        if not product or not isinstance(product, dict):
-            return JSONResponse(status_code=404, content={"error": "Нет данных по товару (null product)"})
-
-        title = product.get("title", "Нет названия")
+        title = product.get("title") or "Нет названия"
         stats = product.get("stats", {})
         price_data = stats.get("current", [])
 
-        # 💰 Извлечение цены
-        if isinstance(price_data, list) and len(price_data) > 0:
-            raw_price = price_data[0]
-            price = round(raw_price / 100, 2) if raw_price and raw_price > 0 else None
-        else:
-            price = None
+        price = None
+        if isinstance(price_data, list) and len(price_data) > 0 and price_data[0]:
+            price = round(price_data[0] / 100, 2)
 
         return {
             "asin": asin,
