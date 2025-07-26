@@ -6,7 +6,7 @@ import time
 
 app = FastAPI()
 
-# 🔐 ВСТРОЕННЫЙ КЛЮЧ (небезопасно для публичного репозитория!)
+# ВСТРОЕННЫЙ КЛЮЧ
 API_KEY = "9s53td5fjae0t5sr7rp5tfeq4ton69ng5eocg77e3a66t00gef3gaqdmcjsis7ec"
 
 class PriceResponse(BaseModel):
@@ -23,11 +23,15 @@ def get_product_price(asin: str = Query(..., description="ASIN товара с A
     try:
         api = keepa.Keepa(API_KEY)
 
-        # 🔁 Обновляем товар, ждём 15 секунд
-        api.query([asin], domain='US', update=True)
-        time.sleep(15)
-
+        # Пробуем получить товар (без форс-апдейта сначала)
         result = api.query([asin], domain='US')
+
+        if not result or result[0] is None:
+            # Пробуем форс-обновить и подождать
+            api.query([asin], domain='US', update=True)
+            time.sleep(15)
+            result = api.query([asin], domain='US')
+
         if not result or len(result) == 0 or result[0] is None:
             raise ValueError("Товар не найден")
 
